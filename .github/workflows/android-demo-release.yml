@@ -1,0 +1,62 @@
+name: Publish Android demo
+
+on:
+  push:
+    tags:
+      - v0.1.0-demo
+
+permissions:
+  contents: write
+
+jobs:
+  android-demo:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install pinned Flutter SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --branch 3.16.5 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          test "$(git -C "$RUNNER_TEMP/flutter" rev-parse HEAD)" = 78666c8dc57e9f7548ca9f8dd0740fbf0c658dc9
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+      - name: Prepare Android dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdkmanager 'platforms;android-34' 'build-tools;30.0.3' 'build-tools;34.0.0'
+          mkdir -p "$HOME/.gradle"
+          echo 'org.gradle.workers.max=2' >> "$HOME/.gradle/gradle.properties"
+          flutter --disable-analytics
+          flutter pub get --enforce-lockfile
+      - name: Validate Flutter application
+        run: |
+          flutter analyze
+          flutter test --reporter expanded
+      - name: Build offline Android demo
+        run: flutter build apk --debug --no-pub --target-platform android-arm64 --dart-define=DEMO_MODE=true
+      - name: Package and verify APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+          cp build/app/outputs/flutter-apk/app-debug.apk release-assets/lockit-demo-arm64.apk
+          "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify release-assets/lockit-demo-arm64.apk
+          cd release-assets
+          zip lockit-demo-arm64.zip lockit-demo-arm64.apk
+          unzip -t lockit-demo-arm64.zip
+          sha256sum lockit-demo-arm64.zip > SHA256SUMS.txt
+      - name: Upload assets and publish prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release upload "$GITHUB_REF_NAME" release-assets/lockit-demo-arm64.zip release-assets/SHA256SUMS.txt --clobber
+          gh release edit "$GITHUB_REF_NAME" --draft=false --prerelease --latest=false
