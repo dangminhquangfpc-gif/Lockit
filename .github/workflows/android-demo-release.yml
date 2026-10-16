@@ -1,0 +1,79 @@
+name: Publish Android demo
+
+on:
+  push:
+    tags:
+      - 'v*-demo'
+
+permissions:
+  contents: write
+
+jobs:
+  android-demo:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install pinned Flutter SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --branch 3.16.5 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          test "$(git -C "$RUNNER_TEMP/flutter" rev-parse HEAD)" = 78666c8dc57e9f7548ca9f8dd0740fbf0c658dc9
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+      - name: Prepare Android dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o "$RUNNER_TEMP/android-cli.zip"
+          echo "d313adb7aedccf6cf0cfca51ec180f0059f5f8f8  $RUNNER_TEMP/android-cli.zip" | sha1sum -c -
+          unzip -q "$RUNNER_TEMP/android-cli.zip" -d "$RUNNER_TEMP/android-cli"
+          sdk_manager="$RUNNER_TEMP/android-cli/cmdline-tools/bin/sdkmanager"
+          "$sdk_manager" --sdk_root="$ANDROID_HOME" 'platforms;android-34' 'build-tools;30.0.3' 'build-tools;34.0.0'
+          mkdir -p "$HOME/.gradle"
+          echo 'org.gradle.workers.max=2' >> "$HOME/.gradle/gradle.properties"
+          flutter --disable-analytics
+          flutter pub get --enforce-lockfile
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - name: Validate PostgreSQL authorization
+        working-directory: tools
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm test
+      - name: Validate Flutter application
+        run: |
+          flutter analyze
+          flutter test --reporter expanded
+      - name: Build offline Android demo
+        run: flutter build apk --debug --no-pub --target-platform android-arm64 --dart-define=DEMO_MODE=true
+      - name: Package and verify APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+          cp build/app/outputs/flutter-apk/app-debug.apk release-assets/lockit-demo-arm64.apk
+          "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify release-assets/lockit-demo-arm64.apk
+          cd release-assets
+          zip lockit-demo-arm64.zip lockit-demo-arm64.apk
+          unzip -t lockit-demo-arm64.zip
+          sha256sum lockit-demo-arm64.zip > SHA256SUMS.txt
+      - name: Upload assets and publish prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" release-assets/lockit-demo-arm64.zip release-assets/SHA256SUMS.txt --clobber
+          else
+            gh release create "$RELEASE_TAG" release-assets/lockit-demo-arm64.zip release-assets/SHA256SUMS.txt --verify-tag --draft --prerelease --title "Lockit $RELEASE_TAG — Bản trải nghiệm Android" --notes-file "docs/releases/$RELEASE_TAG.md"
+          fi
+          gh release edit "$RELEASE_TAG" --draft=false --prerelease --latest=false
