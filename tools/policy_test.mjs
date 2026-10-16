@@ -47,6 +47,7 @@ try {
   `);
   await db.exec(await readFile(new URL('../supabase/migrations/202610160001_social.sql', import.meta.url), 'utf8'));
   await db.exec(await readFile(new URL('../supabase/migrations/202610160002_profiles.sql', import.meta.url), 'utf8'));
+  await db.exec(await readFile(new URL('../supabase/migrations/202610160003_comments.sql', import.meta.url), 'utf8'));
   for (const [id, username] of [[alice, 'alice'], [bob, 'bob'], [eve, 'eve']]) {
     await ok('insert into auth.users values($1, $2::jsonb)', [id,
       JSON.stringify({username, display_name: username})]);
@@ -87,7 +88,25 @@ try {
   await denied('insert into moments(author_id,image_path) values($1,$2)', [alice, photoPath]);
   await denied("insert into storage.objects(bucket_id,name) values('moments',$1)", [`${alice}/spoof.jpg`]);
   await denied('insert into moments(author_id,image_path) values($1,$2)', [bob, `${bob}/not-uploaded.jpg`]);
+  await denied('select send_photo_comment($1,$2,null)', [photoId, 'pending']);
   await ok('select respond_friend_request($1, true)', [requestId]);
+  await ok('select send_photo_comment($1,$2,null)', [photoId, '  Đẹp quá 😍  ']);
+  const commentId = (await ok('select id from photo_comments')).rows[0].id;
+  equal((await ok('select body from photo_comments')).rows[0].body, 'Đẹp quá 😍', 'comment trimmed with emoji');
+  equal((await ok('select author_id from photo_comments')).rows[0].author_id, bob, 'server assigns comment author');
+  await denied('insert into photo_comments(moment_id,author_id,body) values($1,$2,$3)', [photoId, alice, 'spoof']);
+  await denied('select send_photo_comment($1,$2,null)', [photoId, '   ']);
+  await denied('select send_photo_comment($1,$2,null)', [photoId, 'a'.repeat(501)]);
+  await as(alice);
+  await ok('select send_photo_comment($1,$2,$3)', [photoId, 'Cảm ơn ❤️', commentId]);
+  equal(await count('photo_comments'), 2, 'owner replies to friend');
+  const secondPath = `${alice}/second.jpg`;
+  await ok("insert into storage.objects(bucket_id,name) values('moments',$1)", [secondPath]);
+  const secondPhoto = (await ok('insert into moments(author_id,image_path) values($1,$2) returning id', [alice, secondPath])).rows[0].id;
+  await denied('select send_photo_comment($1,$2,$3)', [secondPhoto, 'wrong photo', commentId]);
+  await ok('delete from moments where id=$1', [secondPhoto]);
+  await ok('delete from storage.objects where name=$1', [secondPath]);
+  await as(bob);
   equal(await count('moments'), 1, 'accepted friend sees posts');
   equal(await count('storage.objects'), 1, 'accepted friend reads private photo');
   await ok('insert into reactions values($1,$2)', [photoId, bob]);
@@ -97,6 +116,8 @@ try {
   equal(await count('moments'), 1, 'friend cannot delete author post');
 
   await as(eve);
+  equal(await count('photo_comments'), 0, 'stranger cannot read comments');
+  await denied('select send_photo_comment($1,$2,null)', [photoId, 'stranger']);
   equal(await count('moments'), 0, 'stranger cannot read post');
   equal(await count('storage.objects'), 0, 'stranger cannot read storage');
   equal(await count('friendships'), 0, 'stranger cannot see friendship');
@@ -106,6 +127,8 @@ try {
 
   await as(bob);
   await ok('select remove_friendship($1)', [requestId]);
+  equal(await count('photo_comments'), 0, 'unfriend revokes comments');
+  await denied('select send_photo_comment($1,$2,null)', [photoId, 'unfriended']);
   equal(await count('moments'), 0, 'unfriend revokes posts');
   equal(await count('storage.objects'), 0, 'unfriend revokes photo requests');
   equal(await count('reactions'), 0, 'unfriend revokes reaction reads');
@@ -120,6 +143,7 @@ try {
   await ok('select remove_friendship($1)', [cancelled]);
   equal(await count('friendships'), 0, 'sender can cancel');
   await ok('delete from moments where id=$1', [photoId]);
+  equal(await count('photo_comments'), 0, 'photo deletion cascades comments and replies');
   equal(await count('moments'), 0, 'owner can delete moment');
   equal(await count('reactions'), 0, 'deletion cascades reactions');
   await ok("delete from storage.objects where name=$1", [photoPath]);
@@ -127,6 +151,8 @@ try {
 
   await db.exec('reset role; set role anon');
   await denied("select update_profile('stranger', '', '', 0)");
+  await denied('select * from photo_comments');
+  await denied('select send_photo_comment($1,$2,null)', [photoId, 'anonymous']);
   await denied('select * from moments');
   await denied("select send_friend_request('bob')");
   console.log(`Passed ${checks} PostgreSQL authorization assertions.`);

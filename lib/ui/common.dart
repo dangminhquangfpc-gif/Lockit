@@ -23,6 +23,10 @@ String friendlyError(Object error) {
   }
   if (error is PostgrestException) {
     switch (error.message) {
+      case 'photo_unavailable':
+        return 'Ảnh không còn tồn tại hoặc bạn không còn quyền xem.';
+      case 'comment_unavailable':
+        return 'Phản hồi không còn tồn tại. Hãy tải lại.';
       case 'profile_not_found':
         return 'Chưa tìm thấy hồ sơ. Hãy tải lại và thử lại.';
       case 'user_not_found':

@@ -53,6 +53,7 @@ Android SDK/JDK và cấu hình proxy/chứng chỉ nằm ngoài mã nguồn tro
 2. Khi dự án sẵn sàng, mở **SQL Editor** và chạy lần lượt hai file bên dưới, **mỗi file một lần**:
    - [001 — tài khoản, kết bạn và ảnh riêng tư](supabase/migrations/202610160001_social.sql).
    - [002 — hồ sơ, giới thiệu và biểu tượng đại diện](supabase/migrations/202610160002_profiles.sql).
+   - [003 — phản hồi ảnh và trả lời với emoji](supabase/migrations/202610160003_comments.sql).
 
    Nếu trước đây đã chạy file 001, chỉ chạy thêm file 002. Giữ bucket `moments` riêng tư và giữ nguyên RLS. Hồ sơ (tên, giới thiệu, biểu tượng) hiển thị trong ứng dụng; ảnh vẫn chỉ được đọc bởi chủ ảnh và bạn bè hiện tại.
 3. Trong **Authentication → Providers → Email**, bật đăng nhập email/mật khẩu. Giữ xác nhận email cho môi trường thật. Với email xác nhận mặc định, người dùng xác nhận trong trình duyệt rồi quay lại app đăng nhập; không cần deep link ở bản này. Cấu hình Site URL hợp lệ nếu cần trang xác nhận riêng.
@@ -91,7 +92,7 @@ npm ci --ignore-scripts
 npm test
 ```
 
-33 kiểm thử Flutter kiểm tra xác thực đầu vào, lời mời đến/đi, gửi lời mời, tải lại khi mất kết nối, điều hướng, đăng xuất, lỗi camera và chế độ trải nghiệm. Kiểm thử SDK Supabase dùng HTTP mô phỏng để kiểm tra đăng ký với PKCE, thông báo xác nhận email/sai mật khẩu, JPEG multipart, dọn file khi đăng bài thất bại, tải ảnh có xác thực và phân trang. Các bài này không gọi Supabase thật. Kiểm thử bổ sung bao gồm sửa hồ sơ/giữ dữ liệu khi lưu lỗi, lịch chọn ngày, tìm bạn, xem ảnh lớn, tải ảnh theo vùng nhìn thấy và tên người dùng dài trên màn hình hẹp. Kiểm thử PostgreSQL chạy migration và 49 kiểm tra quyền truy cập bằng PGlite, với schema Auth/Storage tối giản cho môi trường kiểm thử. Nó không thay thế kiểm thử dịch vụ Supabase thật.
+40 kiểm thử Flutter kiểm tra xác thực đầu vào, lời mời đến/đi, gửi lời mời, tải lại khi mất kết nối, điều hướng, đăng xuất, lỗi camera và chế độ trải nghiệm. Kiểm thử SDK Supabase dùng HTTP mô phỏng để kiểm tra đăng ký với PKCE, thông báo xác nhận email/sai mật khẩu, JPEG multipart, dọn file khi đăng bài thất bại, tải ảnh có xác thực và phân trang. Các bài này không gọi Supabase thật. Kiểm thử bổ sung bao gồm sửa hồ sơ/giữ dữ liệu khi lưu lỗi, lịch chọn ngày, tìm bạn, xem ảnh lớn, tải ảnh theo vùng nhìn thấy và tên người dùng dài trên màn hình hẹp. Kiểm thử PostgreSQL chạy migration và 64 kiểm tra quyền truy cập bằng PGlite, với schema Auth/Storage tối giản cho môi trường kiểm thử. Nó không thay thế kiểm thử dịch vụ Supabase thật.
 
 ### Kiểm tra hai thiết bị trước khi dùng thật
 
@@ -116,3 +117,9 @@ npm test
 ## Nguồn ban đầu
 
 Dựa trên giao diện camera Locket Clone của Nasr Al-Rahbi ([@abom_me](https://twitter.com/abom_me)). Giữ giấy phép MIT trong `LICENSE`.
+
+### Phản hồi về ảnh
+
+Bấm **Phản hồi** bên dưới ảnh để gửi tin nhắn hoặc emoji. Bấm **Trả lời** trên một phản hồi để trích dẫn, rồi nhập nội dung; nút × hủy lựa chọn trả lời. Phản hồi mới nhất ở dưới, có nút tải các phản hồi trước và nút làm mới. Nội dung tối đa 500 ký tự Unicode; gửi lỗi giữ bản nháp để thử lại.
+
+Trong demo, **Thêm phản hồi mẫu từ Linh** tạo dữ liệu mẫu ngay trên máy để thử trả lời. Chưa có tin nhắn thật giữa hai thiết bị. Khi dùng Supabase, chỉ chủ ảnh và bạn bè hiện tại được đọc/gửi; hủy kết bạn thu hồi quyền truy cập, xóa ảnh xóa các phản hồi. Chạy migration 003 sau 001 và 002. Chưa có thông báo đẩy hay đồng bộ phản hồi thời gian thực; bấm làm mới để xem phản hồi mới.

@@ -22,6 +22,7 @@ class DemoRepository implements SocialRepository {
   final List<Moment> _posts = [];
   final Map<String, Uint8List> _photos = {};
   int _sequence = 0;
+  final Map<String, List<PhotoComment>> _comments = {};
 
   @override
   String get userId => me.id;
@@ -160,6 +161,7 @@ class DemoRepository implements SocialRepository {
   Future<void> deleteMoment(Moment moment) async {
     _posts.removeWhere((item) => item.id == moment.id);
     _photos.remove(moment.path);
+    _comments.remove(moment.id);
   }
 
   @override
@@ -178,8 +180,56 @@ class DemoRepository implements SocialRepository {
   }
 
   @override
+  Future<List<PhotoComment>> comments(String momentId,
+      {PhotoComment? before}) async {
+    final rows = List<PhotoComment>.of(_comments[momentId] ?? []);
+    rows.sort((a, b) {
+      final time = b.createdAt.compareTo(a.createdAt);
+      return time == 0 ? b.id.compareTo(a.id) : time;
+    });
+    return rows
+        .where((item) =>
+            before == null ||
+            item.createdAt.isBefore(before.createdAt) ||
+            (item.createdAt == before.createdAt &&
+                item.id.compareTo(before.id) < 0))
+        .take(30)
+        .toList();
+  }
+
+  @override
+  Future<void> sendComment(String momentId, String body,
+      {String? replyTo}) async {
+    if (!_posts.any((post) => post.id == momentId)) {
+      throw StateError('Ảnh không còn tồn tại.');
+    }
+    final error = commentError(body);
+    if (error != null) throw ArgumentError(error);
+    final rows = _comments.putIfAbsent(momentId, () => []);
+    if (replyTo != null && !rows.any((row) => row.id == replyTo)) {
+      throw StateError('Phản hồi không còn tồn tại.');
+    }
+    rows.add(PhotoComment(
+        id: 'comment-${++_sequence}',
+        author: _profile,
+        body: body.trim(),
+        createdAt: DateTime.now().toUtc(),
+        replyTo: replyTo));
+  }
+
+  void addSampleComment(String momentId) {
+    if (!_posts.any((post) => post.id == momentId)) return;
+    _comments.putIfAbsent(momentId, () => []).add(PhotoComment(
+        id: 'comment-${++_sequence}',
+        author: linh,
+        body: 'Ảnh dễ thương quá! 😍✨ (phản hồi mẫu)',
+        createdAt: DateTime.now().toUtc()));
+  }
+
+  @override
   Future<void> signOut() async {
     _posts.clear();
+    _comments.clear();
     _photos.clear();
     _friends.clear();
     onSignOut?.call();

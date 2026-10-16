@@ -79,4 +79,24 @@ class FakeRepository implements SocialRepository {
   Future<void> signOut() async {
     loggedOut = true;
   }
+
+  final List<PhotoComment> feedback = [];
+  @override
+  Future<List<PhotoComment>> comments(String momentId,
+      {PhotoComment? before}) async {
+    if (offline) throw StateError('offline');
+    return before == null ? List.of(feedback.reversed) : [];
+  }
+
+  @override
+  Future<void> sendComment(String momentId, String body,
+      {String? replyTo}) async {
+    if (offline) throw StateError('offline');
+    feedback.add(PhotoComment(
+        id: '${feedback.length}',
+        author: currentProfile,
+        body: body.trim(),
+        createdAt: DateTime.now(),
+        replyTo: replyTo));
+  }
 }

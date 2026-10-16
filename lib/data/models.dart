@@ -58,6 +58,26 @@ class Moment {
   final int likes;
 }
 
+class PhotoComment {
+  const PhotoComment(
+      {required this.id,
+      required this.author,
+      required this.body,
+      required this.createdAt,
+      this.replyTo});
+  final String id;
+  final Profile author;
+  final String body;
+  final DateTime createdAt;
+  final String? replyTo;
+}
+
+String? commentError(String value) => value.trim().isEmpty
+    ? 'Nhập phản hồi hoặc chọn emoji.'
+    : value.trim().runes.length > 500
+        ? 'Phản hồi tối đa 500 ký tự.'
+        : null;
+
 abstract class SocialRepository {
   String get userId;
   Future<Profile> profile();
@@ -76,6 +96,8 @@ abstract class SocialRepository {
   Future<void> publish(Uint8List bytes, String caption);
   Future<void> deleteMoment(Moment moment);
   Future<void> like(Moment moment);
+  Future<List<PhotoComment>> comments(String momentId, {PhotoComment? before});
+  Future<void> sendComment(String momentId, String body, {String? replyTo});
   Future<void> signOut();
 }
 

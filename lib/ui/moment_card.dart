@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../data/models.dart';
 import 'common.dart';
+import 'comments_page.dart';
 import 'profile_avatar.dart';
 import 'photo_viewer.dart';
 
@@ -133,11 +134,20 @@ class _MomentCardState extends State<MomentCard> {
                       moment.liked ? Icons.favorite : Icons.favorite_border,
                       color: moment.liked ? Colors.redAccent : null)),
               Text('${moment.likes}'),
+              TextButton.icon(
+                  onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => CommentsPage(
+                              moment: moment, repository: widget.repository))),
+                  icon: const Icon(Icons.chat_bubble_outline, size: 18),
+                  label: const Text('Phản hồi')),
               const Spacer(),
               const Icon(Icons.people_outline, size: 16),
               const SizedBox(width: 6),
-              Text(widget.demo ? 'Trong phiên thử' : 'Chỉ bạn bè',
-                  style: const TextStyle(fontSize: 12)),
+              Flexible(
+                  child: Text(widget.demo ? 'Trong phiên thử' : 'Chỉ bạn bè',
+                      style: const TextStyle(fontSize: 12))),
             ])),
       ]),
     );

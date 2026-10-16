@@ -142,5 +142,44 @@ class SupabaseRepository implements SocialRepository {
   }
 
   @override
+  Future<List<PhotoComment>> comments(String momentId,
+      {PhotoComment? before}) async {
+    var query = client
+        .from('photo_comments')
+        .select('*, author:profiles!photo_comments_author_id_fkey(*)')
+        .eq('moment_id', momentId);
+    if (before != null) {
+      final time = before.createdAt.toUtc().toIso8601String();
+      query = query.or(
+          'created_at.lt.$time,and(created_at.eq.$time,id.lt.${before.id})');
+    }
+    final rows = await query
+        .order('created_at', ascending: false)
+        .order('id', ascending: false)
+        .limit(30);
+    return rows
+        .map((row) => PhotoComment(
+            id: row['id'] as String,
+            author: Profile.fromJson(
+                Map<String, dynamic>.from(row['author'] as Map)),
+            body: row['body'] as String,
+            createdAt: DateTime.parse(row['created_at'] as String),
+            replyTo: row['reply_to'] as String?))
+        .toList();
+  }
+
+  @override
+  Future<void> sendComment(String momentId, String body,
+      {String? replyTo}) async {
+    final error = commentError(body);
+    if (error != null) throw ArgumentError(error);
+    await client.rpc('send_photo_comment', params: {
+      'photo_id': momentId,
+      'message': body.trim(),
+      'parent_id': replyTo,
+    });
+  }
+
+  @override
   Future<void> signOut() => client.auth.signOut();
 }

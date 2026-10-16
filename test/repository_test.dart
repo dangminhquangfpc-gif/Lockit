@@ -24,6 +24,41 @@ Map<String, dynamic> postJson() => {
     };
 
 void main() {
+  test('feedback reads bounded pages and sends reply without client author',
+      () async {
+    final fixture = SupabaseFixture((request) {
+      if (request.url.path.contains('/rpc/')) return jsonResponse(null);
+      return jsonResponse([
+        {
+          'id': '00000000-0000-0000-0000-000000000005',
+          'author': testProfile,
+          'body': 'Đẹp 😍',
+          'created_at': '2026-10-16T05:00:00Z',
+          'reply_to': null,
+        }
+      ]);
+    });
+    addTearDown(fixture.dispose);
+    await fixture.login();
+    final repo = SupabaseRepository(fixture.client);
+    final first = (await repo.comments('photo')).single;
+    expect(first.body, 'Đẹp 😍');
+    expect(fixture.requests.last.url.queryParameters['moment_id'], 'eq.photo');
+    expect(fixture.requests.last.url.queryParameters['limit'], '30');
+    await repo.comments('photo', before: first);
+    expect(fixture.requests.last.url.queryParameters['or'], contains(first.id));
+    await repo.sendComment('photo', ' Cảm ơn ❤️ ', replyTo: first.id);
+    expect(jsonDecode(fixture.requests.last.body), {
+      'photo_id': 'photo',
+      'message': 'Cảm ơn ❤️',
+      'parent_id': first.id,
+    });
+    expect(fixture.requests.last.url.path, '/rest/v1/rpc/send_photo_comment');
+    final count = fixture.requests.length;
+    await expectLater(repo.sendComment('photo', ' '), throwsArgumentError);
+    expect(fixture.requests.length, count);
+  });
+
   test(
       'publishing uploads JPEG privately, then inserts owner, path and caption',
       () async {
