@@ -3,13 +3,13 @@
 <plist version="1.0">
 <dict>
 <key>NSMicrophoneUsageDescription</key>
-<string>your usage description here</string>
+<string>Lockit không ghi âm khi chụp ảnh.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Lock it</string>
+	<string>Lockit</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -31,7 +31,7 @@
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string> To can users take photo and share it</string>
+	<string>Lockit dùng camera để bạn chụp và chia sẻ khoảnh khắc với bạn bè.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UIBackgroundModes</key>
