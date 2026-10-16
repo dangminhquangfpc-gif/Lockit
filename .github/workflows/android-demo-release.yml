@@ -2,6 +2,8 @@ name: Publish Android demo
 
 on:
   push:
+    branches:
+      - release/lockit-demo-20261016
     tags:
       - v0.1.0-demo
 
@@ -13,10 +15,10 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           persist-credentials: false
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -31,7 +33,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          sdkmanager 'platforms;android-34' 'build-tools;30.0.3' 'build-tools;34.0.0'
+          curl -fsSL https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o "$RUNNER_TEMP/android-cli.zip"
+          echo "d313adb7aedccf6cf0cfca51ec180f0059f5f8f8  $RUNNER_TEMP/android-cli.zip" | sha1sum -c -
+          unzip -q "$RUNNER_TEMP/android-cli.zip" -d "$RUNNER_TEMP/android-cli"
+          sdk_manager="$RUNNER_TEMP/android-cli/cmdline-tools/bin/sdkmanager"
+          "$sdk_manager" --sdk_root="$ANDROID_HOME" 'platforms;android-34' 'build-tools;30.0.3' 'build-tools;34.0.0'
           mkdir -p "$HOME/.gradle"
           echo 'org.gradle.workers.max=2' >> "$HOME/.gradle/gradle.properties"
           flutter --disable-analytics
@@ -57,6 +63,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: v0.1.0-demo
         run: |
-          gh release upload "$GITHUB_REF_NAME" release-assets/lockit-demo-arm64.zip release-assets/SHA256SUMS.txt --clobber
-          gh release edit "$GITHUB_REF_NAME" --draft=false --prerelease --latest=false
+          gh release upload "$RELEASE_TAG" release-assets/lockit-demo-arm64.zip release-assets/SHA256SUMS.txt --clobber
+          gh release edit "$RELEASE_TAG" --draft=false --prerelease --latest=false
