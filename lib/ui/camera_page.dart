@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import '../data/models.dart';
+import '../data/temporary_photo.dart';
 import 'common.dart';
 
 class CameraPage extends StatefulWidget {
@@ -123,10 +124,14 @@ class _CameraPageState extends State<CameraPage> with WidgetsBindingObserver {
     final generation = _generation;
     try {
       final file = await controller.takePicture();
-      final bytes = await file.readAsBytes();
-      if (mounted && generation == _generation) {
-        setState(() => _image = bytes);
-        await _release();
+      try {
+        final bytes = await file.readAsBytes();
+        if (mounted && generation == _generation) {
+          setState(() => _image = bytes);
+          await _release();
+        }
+      } finally {
+        await deleteTemporaryPhoto(file.path);
       }
     } catch (_) {
       if (mounted) notice(context, 'Không chụp được ảnh. Hãy thử lại.');

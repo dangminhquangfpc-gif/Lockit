@@ -46,12 +46,27 @@ try {
     grant execute on function auth.uid(), storage.foldername(text) to authenticated, anon;
   `);
   await db.exec(await readFile(new URL('../supabase/migrations/202610160001_social.sql', import.meta.url), 'utf8'));
+  await db.exec(await readFile(new URL('../supabase/migrations/202610160002_profiles.sql', import.meta.url), 'utf8'));
   for (const [id, username] of [[alice, 'alice'], [bob, 'bob'], [eve, 'eve']]) {
     await ok('insert into auth.users values($1, $2::jsonb)', [id,
       JSON.stringify({username, display_name: username})]);
   }
   await as(alice);
   equal(await count('profiles'), 3, 'signup trigger creates profiles');
+  await ok('select update_profile($1,$2,$3,$4)', ['  Alice mới  ', '  Hôm nay vui  ', '🌻', 2]);
+  const updated = (await ok('select * from profiles where id=$1', [alice])).rows[0];
+  equal(updated.display_name, 'Alice mới', 'profile name trimmed and saved');
+  equal(updated.bio, 'Hôm nay vui', 'profile bio trimmed and saved');
+  equal(updated.avatar_emoji, '🌻', 'profile emoji saved');
+  equal(updated.avatar_color, 2, 'profile color saved');
+  equal(updated.username, 'alice', 'profile update preserves username');
+  equal((await ok('select display_name from profiles where id=$1', [bob])).rows[0].display_name, 'bob', 'other profile untouched');
+  await denied('update profiles set display_name=$1 where id=$2', ['spoofed', bob]);
+  await denied('select update_profile($1,$2,$3,$4)', ['', '', '', 0]);
+  await denied('select update_profile($1,$2,$3,$4)', ['a'.repeat(41), '', '', 0]);
+  await denied('select update_profile($1,$2,$3,$4)', ['Alice', 'a'.repeat(81), '', 0]);
+  await denied('select update_profile($1,$2,$3,$4)', ['Alice', '', 'not-an-avatar', 0]);
+  await denied('select update_profile($1,$2,$3,$4)', ['Alice', '', '', 99]);
   await ok("insert into storage.objects(bucket_id, name) values('moments', $1)", [photoPath]);
   await ok('insert into moments(id, author_id, image_path, caption) values($1,$2,$3,$4)',
     [photoId, alice, photoPath, 'Hôm nay']);
@@ -111,6 +126,7 @@ try {
   equal(await count('storage.objects'), 0, 'owner can clean up deleted photo');
 
   await db.exec('reset role; set role anon');
+  await denied("select update_profile('stranger', '', '', 0)");
   await denied('select * from moments');
   await denied("select send_friend_request('bob')");
   console.log(`Passed ${checks} PostgreSQL authorization assertions.`);

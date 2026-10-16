@@ -23,6 +23,8 @@ String friendlyError(Object error) {
   }
   if (error is PostgrestException) {
     switch (error.message) {
+      case 'profile_not_found':
+        return 'Chưa tìm thấy hồ sơ. Hãy tải lại và thử lại.';
       case 'user_not_found':
         return 'Không tìm thấy tên người dùng này.';
       case 'cannot_add_self':

@@ -14,6 +14,21 @@ class SupabaseRepository implements SocialRepository {
       await client.from('profiles').select().eq('id', userId).single());
 
   @override
+  Future<Profile> updateProfile(
+      {required String name,
+      required String bio,
+      required String emoji,
+      required int colorIndex}) async {
+    await client.rpc('update_profile', params: {
+      'new_name': name.trim(),
+      'new_bio': bio.trim(),
+      'new_emoji': emoji,
+      'new_color': colorIndex,
+    });
+    return profile();
+  }
+
+  @override
   Future<List<Friendship>> friendships() async {
     final rows = await client.from('friendships').select(
         'id, sender_id, recipient_id, status, sender:profiles!friendships_sender_id_fkey(*), recipient:profiles!friendships_recipient_id_fkey(*)');
@@ -30,8 +45,9 @@ class SupabaseRepository implements SocialRepository {
   }
 
   @override
-  Future<void> requestFriend(String username) => client
-      .rpc('send_friend_request', params: {'target_username': username.trim()});
+  Future<void> requestFriend(String username) =>
+      client.rpc('send_friend_request',
+          params: {'target_username': normalizeUsername(username)});
 
   @override
   Future<void> respond(String id, {required bool accept}) =>
@@ -43,10 +59,16 @@ class SupabaseRepository implements SocialRepository {
       client.rpc('remove_friendship', params: {'request_id': id});
 
   @override
-  Future<List<Moment>> moments({bool mine = false, Moment? before}) async {
+  Future<List<Moment>> moments(
+      {bool mine = false, Moment? before, DateTime? onDay}) async {
     var query = client.from('moments').select(
         '*, author:profiles!moments_author_id_fkey(*), reactions(user_id)');
     if (mine) query = query.eq('author_id', userId);
+    if (onDay != null) {
+      query = query
+          .gte('created_at', localDayStart(onDay).toUtc().toIso8601String())
+          .lt('created_at', nextLocalDay(onDay).toUtc().toIso8601String());
+    }
     if (before != null) {
       // Stable cursor even if multiple posts share a timestamp.
       final timestamp = before.createdAt.toUtc().toIso8601String();

@@ -2,10 +2,8 @@ name: Publish Android demo
 
 on:
   push:
-    branches:
-      - release/lockit-demo-20261016
     tags:
-      - v0.1.0-demo
+      - 'v*-demo'
 
 permissions:
   contents: write
@@ -42,6 +40,14 @@ jobs:
           echo 'org.gradle.workers.max=2' >> "$HOME/.gradle/gradle.properties"
           flutter --disable-analytics
           flutter pub get --enforce-lockfile
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - name: Validate PostgreSQL authorization
+        working-directory: tools
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm test
       - name: Validate Flutter application
         run: |
           flutter analyze
@@ -63,7 +69,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          RELEASE_TAG: v0.1.0-demo
+          RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          gh release upload "$RELEASE_TAG" release-assets/lockit-demo-arm64.zip release-assets/SHA256SUMS.txt --clobber
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" release-assets/lockit-demo-arm64.zip release-assets/SHA256SUMS.txt --clobber
+          else
+            gh release create "$RELEASE_TAG" release-assets/lockit-demo-arm64.zip release-assets/SHA256SUMS.txt --verify-tag --draft --prerelease --title "Lockit $RELEASE_TAG — Bản trải nghiệm Android" --notes-file "docs/releases/$RELEASE_TAG.md"
+          fi
           gh release edit "$RELEASE_TAG" --draft=false --prerelease --latest=false

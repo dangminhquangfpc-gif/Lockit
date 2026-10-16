@@ -103,10 +103,7 @@ class _AuthPageState extends State<AuthPage> {
                                 maxLength: 40,
                                 decoration: const InputDecoration(
                                     labelText: 'Tên hiển thị'),
-                                validator: (value) =>
-                                    (value?.trim().isEmpty ?? true)
-                                        ? 'Nhập tên của bạn.'
-                                        : null),
+                                validator: displayNameError),
                             const SizedBox(height: 12),
                             TextFormField(
                                 controller: _username,

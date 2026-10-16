@@ -7,6 +7,7 @@ class DemoRepository implements SocialRepository {
   DemoRepository({this.onSignOut});
   final void Function()? onSignOut;
   static const me = Profile(id: 'demo-me', username: 'ban_demo', name: 'Bạn');
+  Profile _profile = me;
   static const linh =
       Profile(id: 'demo-linh', username: 'linh_demo', name: 'Linh (mẫu)');
   static const minh =
@@ -25,12 +26,35 @@ class DemoRepository implements SocialRepository {
   @override
   String get userId => me.id;
   @override
-  Future<Profile> profile() async => me;
+  Future<Profile> profile() async => _profile;
+  @override
+  Future<Profile> updateProfile(
+      {required String name,
+      required String bio,
+      required String emoji,
+      required int colorIndex}) async {
+    if (displayNameError(name) != null ||
+        bioError(bio) != null ||
+        !profileEmojiChoices.contains(emoji) ||
+        colorIndex < 0 ||
+        colorIndex > 5) {
+      throw ArgumentError('Invalid profile');
+    }
+    _profile = Profile(
+        id: me.id,
+        username: me.username,
+        name: name.trim(),
+        bio: bio.trim(),
+        emoji: emoji,
+        colorIndex: colorIndex);
+    return _profile;
+  }
+
   @override
   Future<List<Friendship>> friendships() async => List.of(_friends);
   @override
   Future<void> requestFriend(String username) async {
-    final value = username.trim();
+    final value = normalizeUsername(username);
     if (value == me.username) {
       throw const PostgrestException(message: 'cannot_add_self');
     }
@@ -75,7 +99,8 @@ class DemoRepository implements SocialRepository {
   }
 
   @override
-  Future<List<Moment>> moments({bool mine = false, Moment? before}) async {
+  Future<List<Moment>> moments(
+      {bool mine = false, Moment? before, DateTime? onDay}) async {
     var posts = _posts.toList()
       ..sort((a, b) {
         final date = b.createdAt.compareTo(a.createdAt);
@@ -89,19 +114,41 @@ class DemoRepository implements SocialRepository {
                   item.id.compareTo(before.id) < 0))
           .toList();
     }
-    return posts.take(20).toList();
+    if (onDay != null) {
+      final start = localDayStart(onDay).toUtc();
+      final end = nextLocalDay(onDay).toUtc();
+      posts = posts
+          .where((item) =>
+              !item.createdAt.isBefore(start) && item.createdAt.isBefore(end))
+          .toList();
+    }
+    return posts
+        .take(20)
+        .map((item) => Moment(
+            id: item.id,
+            author: _profile,
+            path: item.path,
+            caption: item.caption,
+            createdAt: item.createdAt,
+            liked: item.liked,
+            likes: item.likes))
+        .toList();
   }
 
   @override
-  Future<Uint8List> photo(String path) async =>
-      Uint8List.fromList(_photos[path]!);
+  Future<Uint8List> photo(String path) async {
+    final bytes = _photos[path];
+    if (bytes == null) throw StateError('Ảnh thử không còn tồn tại.');
+    return Uint8List.fromList(bytes);
+  }
+
   @override
   Future<void> publish(Uint8List bytes, String caption) async {
     final id = 'demo-${++_sequence}';
     _photos[id] = Uint8List.fromList(bytes);
     _posts.add(Moment(
         id: id,
-        author: me,
+        author: _profile,
         path: id,
         caption: caption.trim(),
         createdAt: DateTime.now().toUtc(),

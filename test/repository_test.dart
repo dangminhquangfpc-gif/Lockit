@@ -174,4 +174,54 @@ void main() {
     expect(jsonDecode(fixture.requests.last.body)['prefixes'],
         ['$testUserId/today.jpg']);
   });
+  test(
+      'profile update cannot choose an account ID and refreshes the saved profile',
+      () async {
+    final fixture = SupabaseFixture(
+        (request) => request.url.path.endsWith('/update_profile')
+            ? jsonResponse(null, status: 204)
+            : jsonResponse({
+                ...testProfile,
+                'display_name': 'Ngọc',
+                'bio': 'Một ngày đẹp',
+                'avatar_emoji': '🌻',
+                'avatar_color': 2
+              }));
+    addTearDown(fixture.dispose);
+    await fixture.login();
+    final profile = await SupabaseRepository(fixture.client).updateProfile(
+        name: '  Ngọc  ', bio: '  Một ngày đẹp  ', emoji: '🌻', colorIndex: 2);
+    expect(profile.name, 'Ngọc');
+    expect(profile.bio, 'Một ngày đẹp');
+    expect(profile.emoji, '🌻');
+    expect(profile.colorIndex, 2);
+    expect(jsonDecode(fixture.requests.first.body), {
+      'new_name': 'Ngọc',
+      'new_bio': 'Một ngày đẹp',
+      'new_emoji': '🌻',
+      'new_color': 2,
+    });
+    expect(fixture.requests.last.url.queryParameters['id'], 'eq.$testUserId');
+  });
+
+  test(
+      'day filter uses local midnight boundaries converted to UTC and keeps the cursor',
+      () async {
+    final fixture = SupabaseFixture((_) => jsonResponse([postJson()]));
+    addTearDown(fixture.dispose);
+    await fixture.login();
+    final repository = SupabaseRepository(fixture.client);
+    final day = DateTime(2026, 10, 16);
+    final first = await repository.moments(mine: true, onDay: day);
+    await repository.moments(mine: true, onDay: day, before: first.single);
+    final request = fixture.requests.last;
+    final dates = request.url.queryParametersAll['created_at']!;
+    expect(dates,
+        contains('gte.${DateTime(2026, 10, 16).toUtc().toIso8601String()}'));
+    expect(dates,
+        contains('lt.${DateTime(2026, 10, 17).toUtc().toIso8601String()}'));
+    expect(request.url.queryParameters['or'],
+        contains('id.lt.${first.single.id}'));
+    expect(request.url.queryParameters['author_id'], 'eq.$testUserId');
+  });
 }

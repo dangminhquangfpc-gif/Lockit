@@ -2,17 +2,21 @@
 
 Ứng dụng Flutter cho **Android và iPhone**: chụp ảnh hằng ngày và chia sẻ với những người đã đồng ý kết bạn. Giao diện tiếng Việt, dùng Supabase cho tài khoản, cơ sở dữ liệu và lưu ảnh riêng tư.
 
-## Bản đầu tiên
+## Tính năng hiện tại (0.2)
 
 - Đăng ký bằng email, mật khẩu, tên hiển thị và tên người dùng duy nhất.
 - Đăng nhập; phiên đăng nhập được Supabase lưu trên thiết bị; đăng xuất.
 - Kết bạn bằng tên người dùng: gửi, nhận, chấp nhận, từ chối, thu hồi và hủy kết bạn.
 - Chụp ảnh, đổi camera, flash tự động nếu máy hỗ trợ, xem trước và chú thích.
 - Bảng tin có phân trang, kéo xuống tải lại, thả tim, xóa ảnh của mình.
-- Kỷ niệm cá nhân theo thời gian, với ngày và giờ chụp.
+- Hồ sơ cá nhân: sửa tên hiển thị, giới thiệu, biểu tượng và màu đại diện; sao chép tên người dùng.
+- Tìm bạn bè trong danh sách, hiển thị số lời mời và chấp nhận tên được dán có dấu `@`.
+- Kỷ niệm có lịch tiếng Việt để lọc theo ngày tại múi giờ của điện thoại.
+- Chạm ảnh để xem toàn màn hình và phóng to bằng hai ngón tay.
+- Bảng tin chỉ tải ảnh gần vùng đang xem, tránh tải cả album cùng lúc.
 - Ảnh chỉ có thể được tải bởi chủ ảnh và bạn bè hiện tại. Bạn bè mới có thể xem ảnh cũ. Hủy kết bạn chặn các yêu cầu đọc tiếp theo; ảnh đã xem hoặc chụp màn hình không thể thu hồi.
 
-Chưa có widget màn hình chính, thông báo đẩy, chat, chọn người nhận riêng, chỉnh ảnh đại diện hay quy trình xóa tài khoản. Đây là bản phát triển, chưa phải bản đã phát hành trên App Store/Google Play. Trước khi phát hành cần bổ sung xóa tài khoản, chặn/báo cáo người dùng, chính sách quyền riêng tư và kiểm thử thiết bị thật.
+Chưa có widget màn hình chính, thông báo đẩy, chat, chọn người nhận riêng, tải ảnh đại diện từ thư viện hay quy trình xóa tài khoản. Đây là bản phát triển, chưa phải bản đã phát hành trên App Store/Google Play. Trước khi phát hành cần bổ sung xóa tài khoản, chặn/báo cáo người dùng, chính sách quyền riêng tư và kiểm thử thiết bị thật.
 
 ## Trải nghiệm trước khi có Supabase
 
@@ -23,11 +27,13 @@ flutter run --dart-define=DEMO_MODE=true -d DEVICE_ID
 flutter build apk --debug --target-platform android-arm64 --dart-define=DEMO_MODE=true
 ```
 
-Bản trải nghiệm có nhãn rõ ràng, bạn bè mẫu `@linh_demo` và `@minh_demo`. Ảnh không được gửi đến người khác, chỉ giữ trong bộ nhớ của phiên; đăng xuất hoặc khởi động lại app sẽ mất ảnh thử. Tắt ứng dụng không thay thế việc xóa các file tạm của camera trên điện thoại. Bản Android này dành cho điện thoại 64-bit và dùng chữ ký debug để thử nghiệm. Khi kết nối Supabase thật, build bằng `config/local.json` theo hướng dẫn bên dưới và **bỏ `DEMO_MODE=true`**.
+Bản trải nghiệm có nhãn rõ ràng, bạn bè mẫu `@linh_demo` và `@minh_demo`. Ảnh không được gửi đến người khác, chỉ giữ trong bộ nhớ của phiên; đăng xuất hoặc khởi động lại app sẽ mất ảnh thử. App cố gắng dọn file tạm do camera tạo ra sau khi đọc ảnh vào bộ nhớ. Bản Android này dành cho điện thoại 64-bit và dùng chữ ký debug để thử nghiệm. Khi kết nối Supabase thật, build bằng `config/local.json` theo hướng dẫn bên dưới và **bỏ `DEMO_MODE=true`**.
 
-### APK Android đã tạo trong môi trường cloud
+### APK Android trải nghiệm
 
-Tệp cài thử: `build/app/outputs/flutter-apk/lockit-demo-arm64.apk` (khoảng 128 MiB, chế độ debug). Đã kiểm tra chữ ký APK, Android tối thiểu API 21, compile SDK 34 và thư viện Flutter cho arm64. Đây là kiểm tra build/cấu trúc gói; chưa chạy camera trên điện thoại thật. Mở APK trên điện thoại Android 64-bit để cài và cho phép camera khi app hỏi. Bản này không có kết nối Supabase.
+Tải ZIP tại [GitHub Releases](https://github.com/dangminhquangfpc-gif/Lockit/releases). Giải nén và mở APK trên điện thoại Android 64-bit (Android 5.0/API 21 trở lên); cho phép camera khi app hỏi. Chữ ký APK và cấu trúc ZIP được kiểm tra trong workflow, nhưng camera vẫn cần kiểm tra trên điện thoại thật.
+
+Các bản thử được ký bằng khóa debug của máy build. Nếu Android báo không thể cập nhật bản cũ do chữ ký khác nhau, hãy gỡ bản thử cũ rồi cài APK mới. Dữ liệu demo chỉ nằm trong phiên, không phải ảnh đã được đồng bộ lên tài khoản.
 
 Trong cloud, khôi phục đường dẫn công cụ trước khi chạy lệnh:
 
@@ -44,7 +50,11 @@ Android SDK/JDK và cấu hình proxy/chứng chỉ nằm ngoài mã nguồn tro
 ## 1. Tạo Supabase (không cần gửi khóa trong chat)
 
 1. Vào <https://supabase.com/dashboard>, đăng nhập và chọn **New project**. Tạo tên dự án, mật khẩu cơ sở dữ liệu riêng và chọn vùng gần người dùng.
-2. Khi dự án sẵn sàng, mở **SQL Editor**, tạo truy vấn, dán toàn bộ [migration](supabase/migrations/202610160001_social.sql) và chạy **một lần** trên dự án mới. Migration tạo bảng, hàm đăng ký/kết bạn, bucket ảnh riêng tư và quyền truy cập. Không thay bằng bucket công khai.
+2. Khi dự án sẵn sàng, mở **SQL Editor** và chạy lần lượt hai file bên dưới, **mỗi file một lần**:
+   - [001 — tài khoản, kết bạn và ảnh riêng tư](supabase/migrations/202610160001_social.sql).
+   - [002 — hồ sơ, giới thiệu và biểu tượng đại diện](supabase/migrations/202610160002_profiles.sql).
+
+   Nếu trước đây đã chạy file 001, chỉ chạy thêm file 002. Giữ bucket `moments` riêng tư và giữ nguyên RLS. Hồ sơ (tên, giới thiệu, biểu tượng) hiển thị trong ứng dụng; ảnh vẫn chỉ được đọc bởi chủ ảnh và bạn bè hiện tại.
 3. Trong **Authentication → Providers → Email**, bật đăng nhập email/mật khẩu. Giữ xác nhận email cho môi trường thật. Với email xác nhận mặc định, người dùng xác nhận trong trình duyệt rồi quay lại app đăng nhập; không cần deep link ở bản này. Cấu hình Site URL hợp lệ nếu cần trang xác nhận riêng.
 4. Trong phần **Connect / API settings** của dự án, lấy **Project URL** và khóa **publishable** (hoặc `anon` công khai ở dự án cũ).
 5. Sao chép `config/example.json` thành `config/local.json`, thay hai giá trị bằng URL và khóa công khai của dự án. File local đã được Git bỏ qua.
@@ -81,7 +91,7 @@ npm ci --ignore-scripts
 npm test
 ```
 
-21 kiểm thử Flutter kiểm tra xác thực đầu vào, lời mời đến/đi, gửi lời mời, tải lại khi mất kết nối, điều hướng, đăng xuất, lỗi camera và chế độ trải nghiệm. Kiểm thử SDK Supabase dùng HTTP mô phỏng để kiểm tra đăng ký với PKCE, thông báo xác nhận email/sai mật khẩu, JPEG multipart, dọn file khi đăng bài thất bại, tải ảnh có xác thực và phân trang. Các bài này không gọi Supabase thật. Kiểm thử PostgreSQL chạy migration và 36 kiểm tra quyền truy cập bằng PGlite, với schema Auth/Storage tối giản cho môi trường kiểm thử. Nó không thay thế kiểm thử dịch vụ Supabase thật.
+33 kiểm thử Flutter kiểm tra xác thực đầu vào, lời mời đến/đi, gửi lời mời, tải lại khi mất kết nối, điều hướng, đăng xuất, lỗi camera và chế độ trải nghiệm. Kiểm thử SDK Supabase dùng HTTP mô phỏng để kiểm tra đăng ký với PKCE, thông báo xác nhận email/sai mật khẩu, JPEG multipart, dọn file khi đăng bài thất bại, tải ảnh có xác thực và phân trang. Các bài này không gọi Supabase thật. Kiểm thử bổ sung bao gồm sửa hồ sơ/giữ dữ liệu khi lưu lỗi, lịch chọn ngày, tìm bạn, xem ảnh lớn, tải ảnh theo vùng nhìn thấy và tên người dùng dài trên màn hình hẹp. Kiểm thử PostgreSQL chạy migration và 49 kiểm tra quyền truy cập bằng PGlite, với schema Auth/Storage tối giản cho môi trường kiểm thử. Nó không thay thế kiểm thử dịch vụ Supabase thật.
 
 ### Kiểm tra hai thiết bị trước khi dùng thật
 
@@ -90,7 +100,9 @@ npm test
 3. A gửi lời mời tới tên B. B vẫn không thấy ảnh khi chưa chấp nhận. A không được tự chấp nhận lời mời mình gửi.
 4. B chấp nhận. Kéo tải lại bảng tin trên cả hai máy: B thấy ảnh A, có thể thả tim; A thấy số tim. B chụp ảnh và A thấy ảnh đó.
 5. A hủy kết bạn. B tải lại: ảnh A biến mất; API tải ảnh bằng phiên B phải bị từ chối. Không dùng URL công khai để kiểm tra.
-6. Kiểm tra từ chối/thu hồi lời mời, chụp lại, xóa ảnh, đăng xuất/đăng nhập lại, mất mạng, từ chối camera, đổi camera và đưa app ra nền rồi mở lại.
+6. Sửa hồ sơ A; tải lại phía B để kiểm tra tên/biểu tượng mới. A không thể sửa hồ sơ B bằng API.
+7. Tạo ảnh gần nửa đêm theo múi giờ điện thoại, chọn ngày trong Kỷ niệm và kiểm tra ảnh không bị lệch sang ngày bên cạnh. Thử cùng bộ lọc khi tải trang tiếp theo.
+8. Kiểm tra từ chối/thu hồi lời mời, tìm bạn bằng tên, chụp lại, xóa ảnh, xem ảnh lớn, đăng xuất/đăng nhập lại, mất mạng, từ chối camera, đổi camera và đưa app ra nền rồi mở lại.
 
 ## Cấu trúc
 

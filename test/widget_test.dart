@@ -1,66 +1,11 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lockit/data/models.dart';
+import 'support/fake_social_repository.dart';
 import 'package:lockit/main.dart';
 import 'package:lockit/ui/camera_page.dart';
 import 'package:lockit/ui/friends_page.dart';
 import 'package:lockit/ui/social_home.dart';
-
-const me = Profile(id: 'me', username: 'minh', name: 'Minh');
-const friend = Profile(id: 'friend', username: 'linh', name: 'Linh');
-
-class FakeRepository implements SocialRepository {
-  List<Friendship> connections = [];
-  List<Moment> posts = [];
-  final List<String> requests = [];
-  final List<String> accepted = [];
-  final List<String> removed = [];
-  bool offline = false;
-  bool loggedOut = false;
-  @override
-  String get userId => me.id;
-  @override
-  Future<Profile> profile() async => me;
-  @override
-  Future<List<Friendship>> friendships() async => connections;
-  @override
-  Future<void> requestFriend(String username) async {
-    if (offline) throw Exception('offline');
-    requests.add(username);
-  }
-
-  @override
-  Future<void> respond(String id, {required bool accept}) async {
-    if (accept) accepted.add(id);
-    connections = connections.where((row) => row.id != id).toList();
-  }
-
-  @override
-  Future<void> removeFriend(String id) async {
-    removed.add(id);
-    connections = connections.where((row) => row.id != id).toList();
-  }
-
-  @override
-  Future<List<Moment>> moments({bool mine = false, Moment? before}) async {
-    if (offline) throw Exception('offline');
-    return posts.where((post) => !mine || post.author.id == me.id).toList();
-  }
-
-  @override
-  Future<Uint8List> photo(String path) async => Uint8List(0);
-  @override
-  Future<void> publish(Uint8List bytes, String caption) async {}
-  @override
-  Future<void> deleteMoment(Moment moment) async => posts.remove(moment);
-  @override
-  Future<void> like(Moment moment) async {}
-  @override
-  Future<void> signOut() async {
-    loggedOut = true;
-  }
-}
 
 Widget app(Widget child) => MaterialApp(home: Scaffold(body: child));
 

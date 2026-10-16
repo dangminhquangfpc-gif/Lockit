@@ -20,7 +20,7 @@ void main() {
     expect(signedOut, isTrue);
     expect(await repository.moments(), isEmpty);
     expect(await repository.friendships(), isEmpty);
-    await expectLater(repository.photo(post.path), throwsA(isA<TypeError>()));
+    await expectLater(repository.photo(post.path), throwsStateError);
   });
 
   test(

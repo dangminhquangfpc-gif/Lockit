@@ -2,6 +2,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../data/models.dart';
 import 'common.dart';
+import 'profile_avatar.dart';
+import 'photo_viewer.dart';
 
 class MomentCard extends StatefulWidget {
   const MomentCard(
@@ -54,12 +56,7 @@ class _MomentCardState extends State<MomentCard> {
         Padding(
             padding: const EdgeInsets.fromLTRB(18, 12, 8, 12),
             child: Row(children: [
-              CircleAvatar(
-                  backgroundColor: const Color(0xFFF4C95D),
-                  foregroundColor: const Color(0xFF193B32),
-                  child: Text(moment.author.name.isEmpty
-                      ? '?'
-                      : moment.author.name.substring(0, 1))),
+              ProfileAvatar(profile: moment.author),
               const SizedBox(width: 12),
               Expanded(
                   child: Column(
@@ -103,10 +100,21 @@ class _MomentCardState extends State<MomentCard> {
                   if (!snapshot.hasData) {
                     return const Center(child: CircularProgressIndicator());
                   }
-                  return Image.memory(snapshot.data!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) =>
-                          const Center(child: Text('Ảnh không đọc được.')));
+                  return Semantics(
+                      label: 'Xem ảnh của ${moment.author.name}',
+                      button: true,
+                      child: GestureDetector(
+                          onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => PhotoViewer(
+                                      moment: moment,
+                                      bytes: snapshot.data!,
+                                      demo: widget.demo))),
+                          child: Image.memory(snapshot.data!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Center(
+                                  child: Text('Ảnh không đọc được.')))));
                 })),
         if (moment.caption.isNotEmpty)
           Padding(
